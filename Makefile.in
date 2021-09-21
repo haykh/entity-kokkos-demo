@@ -83,7 +83,6 @@ default: help
 
 help:
 	@echo "Current configurations:"
-	@cat REPORT
 	@echo
 	@echo "usage: \`make a,,\`"
 	@echo
@@ -115,7 +114,7 @@ $(1): $(2)
 	$(HIDE)mkdir -p $(dir $(1))
 	$(HIDE)${CXX} ${CXXSTANDARD} $(INCFLAGS) $(DEFINITIONS) $(CPPFLAGS) $(CXXFLAGS) -c $(2) -o $(1)
 endef
-$(foreach obj, $(OBJS), $(eval $(call generateRules, ${obj}, ${ROOT_DIR}/$(subst .o,,$(obj)))))
+$(foreach obj, $(ALL_OBJS), $(eval $(call generateRules, ${obj}, ${ROOT_DIR}/$(subst .o,,$(obj)))))
 
 .PHONY: all help clean cleanlib
 
