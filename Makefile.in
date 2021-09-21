@@ -104,7 +104,7 @@ all : ${BIN_DIR}/${TARGET}
 
 ${BIN_DIR}/${TARGET} : $(OBJS)
 	@echo [L]inking $(notdir $@) from $<
-	$(HIDE)${LINK} $(LDFLAGS) $(OBJS) -o $@
+	$(HIDE)${LINK} $(OBJS) -o $@ $(LDFLAGS)
 
 # generate compilation rules for all `.o` files
 define generateRules
