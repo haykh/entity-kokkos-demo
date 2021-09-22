@@ -84,9 +84,9 @@ default: help
 help:
 	@echo "Current configurations:"
 	@echo
-	@echo "usage: \`make a,,\`"
+	@echo "usage: \`make all\`"
 	@echo
-	@echo "cleanup: \`make clean\`"
+	@echo "cleanup: \`make [clean|cleanlib]\`"
 	@echo
 
 ifeq ($(strip ${USEKOKKOS}), y)
