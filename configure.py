@@ -11,13 +11,13 @@
 #
 # [ Kokkos-specific flags ]
 #   -kokkos                       compile with `Kokkos` support
-#   --kokkos_arch=<ARCH>          `Kokkos` architecture
 #   --kokkos_devices=<DEV>        `Kokkos` devices
+#   --kokkos_arch=<ARCH>          `Kokkos` architecture
 #   --kokkos_options=<OPT>        `Kokkos` options
-#   --kokkos_cuda_options=<COPT>  `Kokkos` Cuda options
-#   --kokkos_loop=[...]           `Kokkos` loop layout
 #   --kokkos_vector_length=<VLEN> `Kokkos` vector length
+#   --kokkos_loop=[...]           `Kokkos` loop layout
 #   --nvcc_wrapper_cxx=<COMPILER> `NVCC_WRAPPER_DEFAULT_COMPILER` flag for `Kokkos`
+#   --kokkos_cuda_options=<COPT>  `Kokkos` Cuda options
 # ----------------------------------------------------------------------------------------
 
 import argparse
@@ -40,6 +40,10 @@ makefile_input = 'Makefile.in'
 makefile_output = 'Makefile'
 
 # Options:
+Kokkos_devices = dict(host=['Serial', 'OpenMP', 'PThreads'], device=['Cuda'])
+Kokkos_arch = dict(host=["AMDAVX", "EPYC", "ARMV80", "ARMV81", "ARMV8_THUNDERX", "ARMV8_THUNDERX2", "WSM", "SNB", "HSW", "BDW", "SKX", "KNC", "KNL", "BGQ", "POWER7", "POWER8", "POWER9"], device=["KEPLER30", "KEPLER32", "KEPLER35", "KEPLER37", "MAXWELL50", "MAXWELL52", "MAXWELL53", "PASCAL60", "PASCAL61", "VOLTA70", "VOLTA72", "TURING75", "AMPERE80", "VEGA900", "VEGA906", "INTEL_GE"])
+Kokkos_devices_options = Kokkos_devices["host"] + Kokkos_devices["device"]
+Kokkos_arch_options = Kokkos_arch["device"] + Kokkos_arch["device"]
 Kokkos_loop_options = ['default', '1DRange', 'MDRange', 'TP-TVR', 'TP-TTR', 'TP-TTR-TVR', 'for']
 
 # . . . auxiliary functions . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . -->
@@ -54,42 +58,33 @@ def defineOptions():
 
   # `Kokkos` specific
   parser.add_argument('-kokkos', action='store_true', default=False, help='compile with `Kokkos` support')
-  parser.add_argument('--kokkos_arch', default='', help='`Kokkos` architecture')
-  parser.add_argument('--kokkos_devices', default='', help='`Kokkos` devices')
+  parser.add_argument('--kokkos_devices', default='Serial', choices=Kokkos_devices_options, help='`Kokkos` devices')
+  parser.add_argument('--kokkos_arch', default='SKX', choices=Kokkos_arch_options, help='`Kokkos` architecture')
   parser.add_argument('--kokkos_options', default='', help='`Kokkos` options')
-  parser.add_argument('--kokkos_cuda_options', default='', help='`Kokkos` CUDA options')
   parser.add_argument('--kokkos_loop', default='default', choices=Kokkos_loop_options, help='`Kokkos` loop layout')
+  parser.add_argument('--kokkos_cuda_options', default='', help='`Kokkos` CUDA options')
   parser.add_argument('--nvcc_wrapper_cxx', default='g++', help='Sets the `NVCC_WRAPPER_DEFAULT_COMPILER` flag for `Kokkos`')
   parser.add_argument('--kokkos_vector_length', default=-1, type=int, help='`Kokkos` vector length')
   return vars(parser.parse_args())
-
-def parseKokkosDev(kokkos_dev):
-  openmp_proper = 'OpenMP'
-  cuda_proper = 'Cuda'
-  aliases = {'omp': openmp_proper, 'openmp': openmp_proper, 'cuda': cuda_proper}
-  def swapAlias(expr, aliases):
-    for al in aliases:
-      if expr.lower() == al:
-        expr = aliases[al]
-    return expr
-  kokkos_dev = [kd.strip() for kd in kokkos_dev.split(',')]
-  kokkos_dev = [swapAlias(kd, aliases) for kd in kokkos_dev]
-  return ','.join(kokkos_dev)
 
 def configureKokkos(arg, mopt):
   if arg['kokkos']:
     # using Kokkos
     # custom flag to recognize that the code is compiled with `Kokkos`
-    arg['kokkos_devices'] = parseKokkosDev(arg['kokkos_devices'])
-    mopt['KOKKOS_ARCH'] = arg['kokkos_arch']
+    # check compatibility between arch and device
+    is_on_host = (arg['kokkos_devices'] in Kokkos_devices['host']) and (arg['kokkos_arch'] in Kokkos_arch['host'])
+    is_on_device = (arg['kokkos_devices'] in Kokkos_devices['device']) and (arg['kokkos_arch'] in Kokkos_arch['device'])
+    assert is_on_host or is_on_device, "Incompatible device & arch specified"
     mopt['KOKKOS_DEVICES'] = arg['kokkos_devices']
+    mopt['KOKKOS_ARCH'] = arg['kokkos_arch']
 
     mopt['KOKKOS_OPTIONS'] = arg['kokkos_options']
     if mopt['KOKKOS_OPTIONS'] != '':
       mopt['KOKKOS_OPTIONS'] += ','
     mopt['KOKKOS_OPTIONS'] += 'disable_deprecated_code'
 
-    mopt['NVCC_WRAPPER_DEFAULT_COMPILER'] = arg['nvcc_wrapper_cxx']
+    if arg['nvcc_wrapper_cxx'] != '':
+      mopt['COMPILER'] = arg['nvcc_wrapper_cxx']
     mopt['KOKKOS_CUDA_OPTIONS'] = arg['kokkos_cuda_options']
 
     if 'Cuda' in mopt['KOKKOS_DEVICES']:
@@ -100,8 +95,7 @@ def configureKokkos(arg, mopt):
       mopt['KOKKOS_CUDA_OPTIONS'] += 'enable_lambda'
 
       # no MPI (TODO)
-      mopt['NVCC_WRAPPER_DEFAULT_COMPILER'] = mopt['COMPILER']
-      mopt['COMPILER'] = '${KOKKOS_PATH}/bin/nvcc_wrapper'
+      mopt['COMPILER'] = f'NVCC_WRAPPER_DEFAULT_COMPILER={arg["nvcc_wrapper_cxx"]} ' + '${KOKKOS_PATH}/bin/nvcc_wrapper'
       # add with MPI here (TODO)
 
     if arg['kokkos_loop'] == 'default':
@@ -129,7 +123,6 @@ def configureKokkos(arg, mopt):
     settings = f'''
   `Kokkos`:
     {'Architecture':30} {arg['kokkos_arch'] if arg['kokkos_arch'] else '-'}
-    {'NVCC wrapper compiler':30} {mopt['NVCC_WRAPPER_DEFAULT_COMPILER']}
     {'Devices':30} {arg['kokkos_devices'] if arg['kokkos_devices'] else '-'}
     {'Options':30} {arg['kokkos_options'] if arg['kokkos_options'] else '-'}
     {'Loop':30} {arg['kokkos_loop']}
@@ -192,17 +185,6 @@ createMakefile(makefile_input, makefile_output, makefile_options)
 
 #  Finish with diagnostic output
 report = f'''
-====================================================
-                 __        __
-                /\ \__  __/\ \__
-       __    ___\ \  _\/\_\ \  _\  __  __
-     / __ \/  _  \ \ \/\/\ \ \ \/ /\ \/\ \\
-    /\  __//\ \/\ \ \ \_\ \ \ \ \_\ \ \_\ \  __
-    \ \____\ \_\ \_\ \__\\\\ \_\ \__\\\\ \____ \/\_\\
-     \/____/\/_/\/_/\/__/ \/_/\/__/ \/___/  \/_/
-                                       /\___/
-                                       \/__/
-
 ====================================================
 Code has been configured with the following options:
 

@@ -32,13 +32,15 @@ endif
 ifeq ($(strip ${USEKOKKOS}), y)
 KOKKOS_PATH := ${EXT_DIR}/kokkos
 KOKKOS_BUILD_DIR = ${BUILD_DIR}/kokkos/
+
 KOKKOS_ARCH := @KOKKOS_ARCH@
 KOKKOS_DEVICES := @KOKKOS_DEVICES@
 KOKKOS_OPTIONS := @KOKKOS_OPTIONS@
+
 KOKKOS_CUDA_OPTIONS := @KOKKOS_CUDA_OPTIONS@
 KOKKOS_CXX_STANDARD := @CXXSTANDARD@
+
 PREPFLAGS := ${PREPFLAGS} @KOKKOS_LOOP_LAYOUT@ @KOKKOS_VECTOR_LENGTH@
-NVCC_WRAPPER_DEFAULT_COMPILER := @NVCC_WRAPPER_DEFAULT_COMPILER@
 DEFINITIONS := $(DEFINITIONS) -DKOKKOS
 endif
 
@@ -79,6 +81,8 @@ ALL_OBJS := $(OBJS)
 
 # # # # # Targets # # # # # # # # # # # # # #
 #
+.PHONY: all help clean cleanlib
+
 default: help
 
 help:
@@ -116,14 +120,13 @@ $(1): $(2)
 endef
 $(foreach obj, $(ALL_OBJS), $(eval $(call generateRules, ${obj}, ${ROOT_DIR}/$(subst .o,,$(obj)))))
 
-.PHONY: all help clean cleanlib
-
 clean:
 	rm -rf ${BUILD_SRC_DIR}
 	rm -rf ${BIN_DIR}
 
 ifeq ($(strip $(USEKOKKOS)), y)
 cleanlib: kokkos-clean
+	rm -f *.o
 endif
 
 -include $(DEPS)

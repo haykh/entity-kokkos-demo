@@ -9,11 +9,14 @@
 
 auto main() -> int {
   using real_t = double;
+  using memspace = Kokkos::CudaSpace;
+  //using memspace = Kokkos::HostSpace;
+
   Kokkos::initialize();
   {
   std::size_t N{10000000};
-  Kokkos::View<real_t*> A("a", N);
-  Kokkos::View<real_t*> B("b", N);
+  Kokkos::View<real_t*, memspace> A("a", N);
+  Kokkos::View<real_t*, memspace> B("b", N);
 
   // init array
   timer::Timer timer("kokkos");
