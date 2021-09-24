@@ -48,7 +48,7 @@ makefile_output = 'Makefile'
 Kokkos_devices = dict(host=['Serial', 'OpenMP', 'PThreads'], device=['Cuda'])
 Kokkos_arch = dict(host=["AMDAVX", "EPYC", "ARMV80", "ARMV81", "ARMV8_THUNDERX", "ARMV8_THUNDERX2", "WSM", "SNB", "HSW", "BDW", "SKX", "KNC", "KNL", "BGQ", "POWER7", "POWER8", "POWER9"], device=["KEPLER30", "KEPLER32", "KEPLER35", "KEPLER37", "MAXWELL50", "MAXWELL52", "MAXWELL53", "PASCAL60", "PASCAL61", "VOLTA70", "VOLTA72", "TURING75", "AMPERE80", "VEGA900", "VEGA906", "INTEL_GE"])
 Kokkos_devices_options = Kokkos_devices["host"] + Kokkos_devices["device"]
-Kokkos_arch_options = Kokkos_arch["device"] + Kokkos_arch["device"]
+Kokkos_arch_options = Kokkos_arch["host"] + Kokkos_arch["device"]
 Kokkos_loop_options = ['default', '1DRange', 'MDRange', 'TP-TVR', 'TP-TTR', 'TP-TTR-TVR', 'for']
 
 # . . . auxiliary functions . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . -->
@@ -224,7 +224,7 @@ full_command = " ".join(sys.argv[:])
 
 #  Finish with diagnostic output
 w = 80
-full_command = '\n'.join(textwrap.wrap(full_command,w))
+full_command = ' \\\n'.join(textwrap.wrap(full_command, w, subsequent_indent="      ", initial_indent="  "))
 report = f'''
 {'':=<{w}}
 {'Full configure command ':.<{w}}
