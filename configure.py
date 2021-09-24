@@ -19,13 +19,18 @@
 #   --nvcc_wrapper_cxx=<COMPILER> `NVCC_WRAPPER_DEFAULT_COMPILER` flag for `Kokkos`
 #   --kokkos_cuda_options=<COPT>  `Kokkos` Cuda options
 # ----------------------------------------------------------------------------------------
+# TODO: maybe remove separate nvcc_wrapper_cxx and inherit from compiler
 
 import argparse
 import glob
 import re
 import subprocess
 import os
+import sys
+import textwrap
 from pathlib import Path
+
+assert sys.version_info >= (3, 7), "Requires python 3.7 or higher"
 
 # Global Settings
 # ---------------
@@ -47,6 +52,11 @@ Kokkos_arch_options = Kokkos_arch["device"] + Kokkos_arch["device"]
 Kokkos_loop_options = ['default', '1DRange', 'MDRange', 'TP-TVR', 'TP-TTR', 'TP-TTR-TVR', 'for']
 
 # . . . auxiliary functions . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . -->
+use_nvcc_wrapper = False
+def findCompiler(compiler):
+  find_command = subprocess.run(['which', compiler], capture_output=True, text=True)
+  return find_command.stdout.strip() if (find_command.returncode == 0) else 'N/A'
+
 def defineOptions():
   parser = argparse.ArgumentParser()
   # compilation
@@ -63,11 +73,12 @@ def defineOptions():
   parser.add_argument('--kokkos_options', default='', help='`Kokkos` options')
   parser.add_argument('--kokkos_loop', default='default', choices=Kokkos_loop_options, help='`Kokkos` loop layout')
   parser.add_argument('--kokkos_cuda_options', default='', help='`Kokkos` CUDA options')
-  parser.add_argument('--nvcc_wrapper_cxx', default='g++', help='Sets the `NVCC_WRAPPER_DEFAULT_COMPILER` flag for `Kokkos`')
+  parser.add_argument('--nvcc_wrapper_cxx', default='', help='Sets the `NVCC_WRAPPER_DEFAULT_COMPILER` flag for `Kokkos`')
   parser.add_argument('--kokkos_vector_length', default=-1, type=int, help='`Kokkos` vector length')
   return vars(parser.parse_args())
 
 def configureKokkos(arg, mopt):
+  global use_nvcc_wrapper
   if arg['kokkos']:
     # using Kokkos
     # custom flag to recognize that the code is compiled with `Kokkos`
@@ -83,8 +94,6 @@ def configureKokkos(arg, mopt):
       mopt['KOKKOS_OPTIONS'] += ','
     mopt['KOKKOS_OPTIONS'] += 'disable_deprecated_code'
 
-    if arg['nvcc_wrapper_cxx'] != '':
-      mopt['COMPILER'] = arg['nvcc_wrapper_cxx']
     mopt['KOKKOS_CUDA_OPTIONS'] = arg['kokkos_cuda_options']
 
     if 'Cuda' in mopt['KOKKOS_DEVICES']:
@@ -94,8 +103,13 @@ def configureKokkos(arg, mopt):
         mopt['KOKKOS_CUDA_OPTIONS'] += ','
       mopt['KOKKOS_CUDA_OPTIONS'] += 'enable_lambda'
 
+      use_nvcc_wrapper = True
+
       # no MPI (TODO)
-      mopt['COMPILER'] = f'NVCC_WRAPPER_DEFAULT_COMPILER={arg["nvcc_wrapper_cxx"]} ' + '${KOKKOS_PATH}/bin/nvcc_wrapper'
+      if arg["nvcc_wrapper_cxx"] == '':
+        arg['nvcc_wrapper_cxx'] = arg['compiler']
+      mopt['COMPILER'] = f'NVCC_WRAPPER_DEFAULT_COMPILER={arg["nvcc_wrapper_cxx"]} '\
+                            + '${KOKKOS_PATH}/bin/nvcc_wrapper'
       # add with MPI here (TODO)
 
     if arg['kokkos_loop'] == 'default':
@@ -183,19 +197,55 @@ makefile_options['WARNING_FLAGS'] = "-Wall -Wextra -pedantic"
 # Step 3. Create new files, finish up
 createMakefile(makefile_input, makefile_output, makefile_options)
 
+# add some useful notes
+def makeNotes():
+  notes = ''
+  cxx = args['nvcc_wrapper_cxx'] if use_nvcc_wrapper else makefile_options['COMPILER']
+  if use_nvcc_wrapper:
+    notes += f'''
+  * nvcc recognized as:
+    $ {findCompiler("nvcc")}'''
+  notes += f'''
+  * {'nvcc wrapper ' if use_nvcc_wrapper else ''}compiler recognized as:
+    $ {findCompiler(cxx)}'''
+  if args['kokkos'] and 'OpenMP' in args['kokkos_devices']:
+    notes += f'''
+  * when using OpenMP set the following environment variables:
+    $ export OMP_PROC_BIND=spread OMP_PLACES=threads OMP_NTHREAD=<INT>
+    '''
+  return notes
+
+short_compiler = (f"nvcc_wrapper [{args['nvcc_wrapper_cxx']}]" if use_nvcc_wrapper else makefile_options['COMPILER'])
+compilation_command = makefile_options['COMPILER'] + '\n\t'\
+                        + f"-std={makefile_options['CXXSTANDARD']}\n\t"\
+                        + (makefile_options['DEBUG_CONF_FLAGS'] + ' ' + makefile_options['DEBUG_PP_FLAGS'] if makefile_options['DEBUGMODE'] else makefile_options['RELEASE_CONF_FLAGS'] + ' ' + makefile_options['RELEASE_PP_FLAGS']).strip() + '\n\t'\
+                        + makefile_options['WARNING_FLAGS'].strip()
+full_command = " ".join(sys.argv[:])
+
 #  Finish with diagnostic output
+w = 80
+full_command = '\n'.join(textwrap.wrap(full_command,w))
 report = f'''
-====================================================
+{'':=<{w}}
+{'Full configure command ':.<{w}}
+  {full_command}
+
 Code has been configured with the following options:
 
-Computational details ..............................
+{'Technical details ':.<{w}}
   {'Use `Kokkos` Library':32} {args['kokkos']}
-
-Technical details ..................................
-  {'Compiler':32} {makefile_options['COMPILER']}
+  {'Compiler':32} {short_compiler}
   {'Debug mode':32} {args['debug']}
   {Kokkos_details}
-====================================================
+
+{'Compilation command ':.<{w}}
+
+  {compilation_command}
+
+{'Notes ':.<{80}}
+  {makeNotes()}
+
+{'':=<{w}}
 '''
 
 print (report)

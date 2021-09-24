@@ -8,9 +8,9 @@
 #include <iostream>
 
 auto main() -> int {
-  using real_t = double;
+  using real_t = float;
   using memspace = Kokkos::CudaSpace;
-  //using memspace = Kokkos::HostSpace;
+  // using memspace = Kokkos::HostSpace;
 
   Kokkos::initialize();
   {
@@ -43,7 +43,7 @@ auto main() -> int {
   );
   timer.stop();
   timer.printElapsed(timer::millisecond);
-  std::cout << sum / static_cast<double>(N) << "\n";
+  std::cout << sum / static_cast<float>(N) << "\n";
 
   }
   Kokkos::finalize();
