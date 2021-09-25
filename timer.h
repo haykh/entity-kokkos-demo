@@ -1,12 +1,14 @@
-#ifndef TIMER_H
-#define TIMER_H
+#ifndef AUX_TIMER_H
+#define AUX_TIMER_H
 
 #include <string>
 #ifndef _OPENMP
 #  include <chrono>
+#else
+#  include <omp.h>
 #endif
 
-#include <utility>
+#include <string>
 
 namespace timer {
 #ifndef _OPENMP
@@ -14,7 +16,6 @@ inline constexpr char BACKEND[] = "Chrono";
 #else
 inline constexpr char BACKEND[] = "OpenMP";
 #endif
-
 // Type to be used for s/ms/us/ms
 class TimeUnit {
 private:
@@ -23,12 +24,12 @@ private:
 
 public:
   TimeUnit() = default;
-  TimeUnit(double mult, std::string unit)
-      : multiplier(static_cast<double>(mult)), unitname(std::move(unit)) {}
+  TimeUnit(double mult, std::string unit) : multiplier(static_cast<double>(mult)), unitname(std::move(unit)) {}
   ~TimeUnit() = default;
   [[nodiscard]] auto getMultiplier() const -> double;
   friend auto operator<<(std::ostream &os, TimeUnit const &v) -> std::ostream &;
 };
+
 // declaration of s/ms/us/ms
 inline const TimeUnit second(1, "s");
 inline const TimeUnit millisecond(1e-3, "ms");
@@ -85,6 +86,7 @@ public:
   void printElapsed(TimeUnit const &u) const;
   void printElapsed() const;
 };
-} // namespace timer
+
+}
 
 #endif // TIMER_H

@@ -1,43 +1,48 @@
 #include "timer.h"
 
-#ifdef KOKKOS
-#  include <Kokkos_Core.hpp>
-#endif
+#include <Kokkos_Core.hpp>
+#define KL KOKKOS_LAMBDA
+#define AccelMemSpace Kokkos::HostSpace
+#define oneDArray(T) Kokkos::View<T*, AccelMemSpace>
 
 #include <cstddef>
 #include <iostream>
 
 auto main() -> int {
-  using real_t = float;
-  using memspace = Kokkos::CudaSpace;
+  using real_t = double;
+  //using memspace = Kokkos::CudaSpace;
   // using memspace = Kokkos::HostSpace;
+
+  //template<typename T>
+  //using oneDArray_t = Kokkos::View<T*, memspace>;
+  using index_t = const std::size_t;
 
   Kokkos::initialize();
   {
   std::size_t N{10000000};
-  Kokkos::View<real_t*, memspace> A("a", N);
-  Kokkos::View<real_t*, memspace> B("b", N);
+  oneDArray(real_t) A("a", N);
+  oneDArray(real_t) B("b", N);
 
   // init array
   timer::Timer timer("kokkos");
   timer.start();
 
   Kokkos::parallel_for("init", N,
-    KOKKOS_LAMBDA (const std::size_t n) {
+    KL (index_t n) {
       A(n) = 1.1;
       B(n) = 2.2;
     }
   );
 
   Kokkos::parallel_for("add", N,
-    KOKKOS_LAMBDA (const std::size_t n) {
+    KL (index_t n) {
       A(n) = A(n) + B(n);
     }
   );
 
   real_t sum{0.0};
   Kokkos::parallel_reduce("sum", N,
-    KOKKOS_LAMBDA (const std::size_t n, real_t &sum) {
+    KL (index_t n, real_t &sum) {
       sum += A(n);
     }, sum
   );
