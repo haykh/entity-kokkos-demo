@@ -22,3 +22,6 @@ __pycache__
 /*.a
 extern/kokkos/
 extern/plog/
+
+run/*
+!/run/submit

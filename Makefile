@@ -10,18 +10,24 @@ default: build
 
 KOKKOS_CXX_STANDARD = c++17
 
+NVCC_WRAPPER_DEFAULT_COMPILER = icpc
+
 ifneq (,$(findstring Cuda,$(KOKKOS_DEVICES)))
 CXX = ${KOKKOS_PATH}/bin/nvcc_wrapper
 EXE = ${EXE_NAME}.cuda
 KOKKOS_ARCH = "Volta70"
 KOKKOS_CUDA_OPTIONS = "enable_lambda"
+CXXFLAGS = -DGPU
 else
 CXX = g++
 EXE = ${EXE_NAME}.host
 KOKKOS_ARCH = "SKX"
+ifneq (,$(findstring OpenMP,$(KOKKOS_DEVICES)))
+CXXFLAGS = -DOMP
+endif
 endif
 
-CXXFLAGS = -O3
+CXXFLAGS := ${CXXFLAGS} -O3
 LINK = ${CXX}
 LINKFLAGS =
 
