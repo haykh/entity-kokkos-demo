@@ -1,6 +1,7 @@
 KOKKOS_PATH = extern/kokkos
 KOKKOS_DEVICES = "Cuda,OpenMP"
 EXE_NAME = "main"
+EXTRA_INC = -Iextern/plog/include
 
 SRC = $(wildcard *.cpp)
 
