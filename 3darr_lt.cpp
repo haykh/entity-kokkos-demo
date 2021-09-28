@@ -46,7 +46,7 @@ auto main() -> int {
   {
     int niter {100};
     int tiles[] = {0, 0, 0};
-    int size[] = {200, 200, 200};
+    int size[] = {400, 400, 400};
 
     NTTArray<double***> A("A", size[0], size[1], size[2]);
     NTTArray<double***> B("B", size[0], size[1], size[2]);
@@ -94,7 +94,8 @@ auto main() -> int {
     timer3.printElapsed(std::cout, ntt::millisecond);
     std::cout << "\n";
 
-    double Gbytes = 1.0e-9 * double( sizeof(double) * (size[0] * size[1] * size[2] * niter * 2) );
+    unsigned long int sz = size[0] * size[1] * size[2];
+    double Gbytes = 1.0e-9 * static_cast<double>( sizeof(double) * (sz * niter * 2) );
     std::cout << "Bandwith : " << Gbytes / timer2.getElapsedIn(ntt::second) << " [GB/s]\n";
     std::cout << (std::abs(sum - 1.0) < 1.0e-8 ? "Test Passed" : "ERROR") << std::endl;
   }

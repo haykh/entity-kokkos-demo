@@ -4,15 +4,13 @@ EXE_NAME = "main"
 EXTRA_INC = -Iextern/plog/include
 
 #SRC = $(wildcard *.cpp)
-SRC := 3darr_tst.cpp 
+SRC := 1darr_omp.cpp 
 SRC := $(SRC) timer.cpp
 
 default: build
 	echo "Start Build"
 
 KOKKOS_CXX_STANDARD = c++17
-
-NVCC_WRAPPER_DEFAULT_COMPILER = icpc
 
 ifneq (,$(findstring Cuda,$(KOKKOS_DEVICES)))
 CXX = ${KOKKOS_PATH}/bin/nvcc_wrapper
@@ -21,9 +19,9 @@ KOKKOS_ARCH = "Volta70"
 KOKKOS_CUDA_OPTIONS = "enable_lambda"
 CXXFLAGS = -DGPU
 else
-CXX = icpc
+CXX = g++-11
 EXE = ${EXE_NAME}.host
-KOKKOS_ARCH = "SKX"
+KOKKOS_ARCH = "HSW"
 ifneq (,$(findstring OpenMP,$(KOKKOS_DEVICES)))
 CXXFLAGS = -DOMP
 endif
