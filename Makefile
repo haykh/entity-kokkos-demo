@@ -3,7 +3,9 @@ KOKKOS_DEVICES = "Cuda,OpenMP"
 EXE_NAME = "main"
 EXTRA_INC = -Iextern/plog/include
 
-SRC = $(wildcard *.cpp)
+#SRC = $(wildcard *.cpp)
+SRC := 3darr_tst.cpp 
+SRC := $(SRC) timer.cpp
 
 default: build
 	echo "Start Build"
@@ -19,7 +21,7 @@ KOKKOS_ARCH = "Volta70"
 KOKKOS_CUDA_OPTIONS = "enable_lambda"
 CXXFLAGS = -DGPU
 else
-CXX = g++
+CXX = icpc
 EXE = ${EXE_NAME}.host
 KOKKOS_ARCH = "SKX"
 ifneq (,$(findstring OpenMP,$(KOKKOS_DEVICES)))

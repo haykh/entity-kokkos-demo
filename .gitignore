@@ -23,5 +23,7 @@ __pycache__
 extern/kokkos/
 extern/plog/
 
+*.host
+*.cuda
 run/*
 !/run/submit
