@@ -25,5 +25,7 @@ extern/plog/
 
 *.host
 *.cuda
+*.omp
+*.mpi
 run/*
 !/run/submit
