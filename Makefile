@@ -4,7 +4,7 @@ EXE_NAME = "main"
 EXTRA_INC = -Iextern/plog/include
 
 #SRC = $(wildcard *.cpp)
-SRC := 1darr_omp.cpp 
+SRC := full.cpp
 SRC := $(SRC) timer.cpp
 
 default: build
@@ -17,13 +17,13 @@ CXX = ${KOKKOS_PATH}/bin/nvcc_wrapper
 EXE = ${EXE_NAME}.cuda
 KOKKOS_ARCH = "Volta70"
 KOKKOS_CUDA_OPTIONS = "enable_lambda"
-CXXFLAGS = -DGPU
+CXXFLAGS = -DGPUENABLED
 else
-CXX = g++-11
+CXX = g++-10
 EXE = ${EXE_NAME}.host
 KOKKOS_ARCH = "HSW"
 ifneq (,$(findstring OpenMP,$(KOKKOS_DEVICES)))
-CXXFLAGS = -DOMP
+CXXFLAGS = -DOMPENABLED
 endif
 endif
 
