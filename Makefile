@@ -15,15 +15,15 @@ KOKKOS_CXX_STANDARD = c++17
 ifneq (,$(findstring Cuda,$(KOKKOS_DEVICES)))
 CXX = ${KOKKOS_PATH}/bin/nvcc_wrapper
 EXE = ${EXE_NAME}.cuda
-KOKKOS_ARCH = "Volta70"
+KOKKOS_ARCH = "AMPERE80"
 KOKKOS_CUDA_OPTIONS = "enable_lambda"
-CXXFLAGS = -DGPUENABLED
+CXXFLAGS = -DGPUENABLED --expt-relaxed-constexpr
 else
-CXX = g++-10
+CXX = icpc
 EXE = ${EXE_NAME}.host
-KOKKOS_ARCH = "HSW"
+KOKKOS_ARCH = "SKX"
 ifneq (,$(findstring OpenMP,$(KOKKOS_DEVICES)))
-CXXFLAGS = -DOMPENABLED
+CXXFLAGS = -DOMPENABLED -Ofast
 endif
 endif
 

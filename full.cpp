@@ -90,7 +90,7 @@ struct DepositStep {
     {}
 
   Inline void operator() (const size_t p) const {
-    real_t gamma_inv {ONE / std::sqrt(ONE + prtls.ux(p) * prtls.ux(p) + prtls.uy(p) * prtls.uy(p) + prtls.uz(p) * prtls.uz(p))};
+    real_t gamma_inv {1.0 / std::sqrt(1.0 + prtls.ux(p) * prtls.ux(p) + prtls.uy(p) * prtls.uy(p) + prtls.uz(p) * prtls.uz(p))};
     real_t x1 {prtls.x(p) - dt * prtls.ux(p) * gamma_inv};
     real_t y1 {prtls.y(p) - dt * prtls.uy(p) * gamma_inv};
     real_t z1 {prtls.z(p) - dt * prtls.uz(p) * gamma_inv};
@@ -114,16 +114,16 @@ struct DepositStep {
                     0.5 * (y1 + prtls.y(p))
                   )
                 );
-    real_t zr = std::min(ONE, std::max(static_cast<real_t>(0), 0.5 * (z1 + prtls.z(p))));
+    real_t zr = std::min(1.0, std::max(static_cast<real_t>(0), 0.5 * (z1 + prtls.z(p))));
 
     real_t Wx1 {0.5 * (x1 + xr) - dx * static_cast<real_t>(i1)};
     real_t Wy1 {0.5 * (y1 + yr) - dx * static_cast<real_t>(j1)};
     real_t Wx2 {0.5 * (prtls.x(p) + xr) - dx * static_cast<real_t>(i2)};
     real_t Wy2 {0.5 * (prtls.y(p) + yr) - dx * static_cast<real_t>(j2)};
-    real_t onemWx1 {ONE - Wx1};
-    real_t onemWy1 {ONE - Wy1};
-    real_t onemWx2 {ONE - Wx2};
-    real_t onemWy2 {ONE - Wy2};
+    real_t onemWx1 {1.0 - Wx1};
+    real_t onemWy1 {1.0 - Wy1};
+    real_t onemWx2 {1.0 - Wx2};
+    real_t onemWy2 {1.0 - Wy2};
 
     real_t Fx1 {-(xr - x1) * weighted_charge};
     real_t Fy1 {-(yr - y1) * weighted_charge};
@@ -211,13 +211,13 @@ auto main() -> int {
   {
     std::cout << ".... init\n";
 
-    ntt::Timer t_deposit_parall("Parallel deposit");
+    ntt::Timer t_deposit_1("Parallel deposit [atomic, simple]");
     ntt::Timer t_deposit_serial("Serial deposit");
 
     int SX { 256 }, SY { 256 };
-    int ppc = 20;
+    int ppc = 128;
     size_t NPART { static_cast<size_t>(SX * SY * ppc) };
-    int n_iter { 100 };
+    int n_iter { 10 };
 
     Particles myparticles(NPART);
     Fields myfields(256, 256);
@@ -230,20 +230,25 @@ auto main() -> int {
     // init
     Init(myfields, myparticles);
 
+    DepositSerial(myfields, myparticles);
+    auto [rx0, ry0, rz0] = Reduce(myfields);
+    Reset(myfields);
+
     // deposit
     for (int i {0}; i < n_iter; ++i) {
       {
-        t_deposit_parall.start();
+        t_deposit_1.start();
         Deposit(myfields, myparticles);
-        t_deposit_parall.stop();
+        t_deposit_1.stop();
       }
       {
         auto [rx, ry, rz] = Reduce(myfields);
-        if (!numbersAreEqual(rx, 2.0604237008016182, 1e-8, 1e-6) ||
-            !numbersAreEqual(ry, 0.70046653834323536, 1e-8, 1e-6) ||
-            !numbersAreEqual(rz, 0.65551925775640463, 1e-8, 1e-6)) {
+        if (!numbersAreEqual(rx, rx0, 1e-8, 1e-6) ||
+            !numbersAreEqual(ry, ry0, 1e-8, 1e-6) ||
+            !numbersAreEqual(rz, rz0, 1e-8, 1e-6)) {
           std::cout << "PARALLEL TEST FAILED\n";
           std::cout << std::setprecision(17) << rx << " : " << ry << " : " << rz << std::endl;
+          std::cout << std::setprecision(17) << rx0 << " : " << ry0 << " : " << rz0 << std::endl;
         }
       }
 
@@ -256,9 +261,9 @@ auto main() -> int {
       }
       {
         auto [rx, ry, rz] = Reduce(myfields);
-        if (!numbersAreEqual(rx, 2.0604237008016182, 1e-8, 1e-6) ||
-            !numbersAreEqual(ry, 0.70046653834323536, 1e-8, 1e-6) ||
-            !numbersAreEqual(rz, 0.65551925775640463, 1e-8, 1e-6)) {
+        if (!numbersAreEqual(rx, rx0, 1e-8, 1e-6) ||
+            !numbersAreEqual(ry, ry0, 1e-8, 1e-6) ||
+            !numbersAreEqual(rz, rz0, 1e-8, 1e-6)) {
           std::cout << "SERIAL TEST FAILED\n";
         }
       }
@@ -266,10 +271,10 @@ auto main() -> int {
       Reset(myfields);
     }
 
-    t_deposit_parall.printElapsed(ntt::millisecond);
-    std::cout << "\n";
     t_deposit_serial.printElapsed(ntt::millisecond);
-    std::cout << " [x" << t_deposit_serial.getElapsedIn(ntt::millisecond) / t_deposit_parall.getElapsedIn(ntt::millisecond) << "]";
+    std::cout << "\n";
+    t_deposit_1.printElapsed(ntt::millisecond);
+    std::cout << " [x" << t_deposit_serial.getElapsedIn(ntt::millisecond) / t_deposit_1.getElapsedIn(ntt::millisecond) << "]";
     std::cout << "\n";
 
     std::cout << ".... fin\n";
