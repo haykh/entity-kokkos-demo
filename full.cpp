@@ -211,11 +211,13 @@ auto main() -> int {
   {
     std::cout << ".... init\n";
 
+    ntt::Timer t_deposit_parall("Parallel deposit");
+    ntt::Timer t_deposit_serial("Serial deposit");
+
     int SX { 256 }, SY { 256 };
     int ppc = 20;
-    // size_t NPART { static_cast<size_t>(SX * SY * ppc) };
-    size_t NPART {1};
-    int n_iter { 1 };
+    size_t NPART { static_cast<size_t>(SX * SY * ppc) };
+    int n_iter { 100 };
 
     Particles myparticles(NPART);
     Fields myfields(256, 256);
@@ -230,28 +232,45 @@ auto main() -> int {
 
     // deposit
     for (int i {0}; i < n_iter; ++i) {
-      Deposit(myfields, myparticles);
+      {
+        t_deposit_parall.start();
+        Deposit(myfields, myparticles);
+        t_deposit_parall.stop();
+      }
       {
         auto [rx, ry, rz] = Reduce(myfields);
-        if (!numbersAreEqual(rx, -0.002948267345925792) ||
-            !numbersAreEqual(ry, 0.0009296049558340513) ||
-            !numbersAreEqual(rz, -0.0003076312619372885)) {
-          std::cout << "TEST FAILED\n";
+        if (!numbersAreEqual(rx, 2.0604237008016182, 1e-8, 1e-6) ||
+            !numbersAreEqual(ry, 0.70046653834323536, 1e-8, 1e-6) ||
+            !numbersAreEqual(rz, 0.65551925775640463, 1e-8, 1e-6)) {
+          std::cout << "PARALLEL TEST FAILED\n";
+          std::cout << std::setprecision(17) << rx << " : " << ry << " : " << rz << std::endl;
         }
       }
 
       Reset(myfields);
 
-      DepositSerial(myfields, myparticles);
+      {
+        t_deposit_serial.start();
+        DepositSerial(myfields, myparticles);
+        t_deposit_serial.stop();
+      }
       {
         auto [rx, ry, rz] = Reduce(myfields);
-        if (!numbersAreEqual(rx, -0.002948267345925792) ||
-            !numbersAreEqual(ry, 0.0009296049558340513) ||
-            !numbersAreEqual(rz, -0.0003076312619372885)) {
-          std::cout << "TEST FAILED\n";
+        if (!numbersAreEqual(rx, 2.0604237008016182, 1e-8, 1e-6) ||
+            !numbersAreEqual(ry, 0.70046653834323536, 1e-8, 1e-6) ||
+            !numbersAreEqual(rz, 0.65551925775640463, 1e-8, 1e-6)) {
+          std::cout << "SERIAL TEST FAILED\n";
         }
       }
+
+      Reset(myfields);
     }
+
+    t_deposit_parall.printElapsed(ntt::millisecond);
+    std::cout << "\n";
+    t_deposit_serial.printElapsed(ntt::millisecond);
+    std::cout << " [x" << t_deposit_serial.getElapsedIn(ntt::millisecond) / t_deposit_parall.getElapsedIn(ntt::millisecond) << "]";
+    std::cout << "\n";
 
     std::cout << ".... fin\n";
   }

@@ -65,7 +65,9 @@ auto numbersAreEqual(T a, T b, T absEpsilon, T relEpsilon) -> bool {
   return (diff <= (std::max(std::abs(a), std::abs(b)) * relEpsilon));
 }
 
-template<typename T>
-auto numbersAreEqual(T a, T b) -> bool {
+auto numbersAreEqual(float a, float b) -> bool {
+  return numbersAreEqual(a, b, C_FLOAT_ABS_EPSILON, C_FLOAT_REL_EPSILON);
+}
+auto numbersAreEqual(double a, double b) -> bool {
   return numbersAreEqual(a, b, C_DOUBLE_ABS_EPSILON, C_DOUBLE_REL_EPSILON);
 }
