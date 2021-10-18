@@ -76,6 +76,123 @@ struct GenRandomParticles {
   }
 };
 
+struct DepositStep_Host {
+  Fields flds;
+  Particles prtls;
+  real_t weighted_charge {1.0};
+  real_t dt;
+  real_t dx;
+
+  typename Kokkos::View<real_t**>::HostMirror jx_m, jy_m, jz_m;
+  typename Kokkos::View<real_t*>::HostMirror x_m, y_m, z_m;
+  typename Kokkos::View<real_t*>::HostMirror ux_m, uy_m, uz_m;
+
+  DepositStep_Host(const Fields& flds_, const Particles& prtls_)
+    : flds{flds_}, prtls{prtls_},
+      dx{(flds.xmax - flds.xmin) / flds.sx},
+      dt{0.4 * (flds.xmax - flds.xmin) / flds.sx},
+      jx_m {Kokkos::create_mirror_view(flds.jx)},
+      jy_m {Kokkos::create_mirror_view(flds.jy)},
+      jz_m {Kokkos::create_mirror_view(flds.jz)},
+      x_m {Kokkos::create_mirror_view(prtls.x)},
+      y_m {Kokkos::create_mirror_view(prtls.y)},
+      z_m {Kokkos::create_mirror_view(prtls.z)},
+      ux_m {Kokkos::create_mirror_view(prtls.ux)},
+      uy_m {Kokkos::create_mirror_view(prtls.uy)},
+      uz_m {Kokkos::create_mirror_view(prtls.uz)}  {
+    Kokkos::deep_copy (jx_m, flds.jx);
+    Kokkos::deep_copy (jy_m, flds.jy);
+    Kokkos::deep_copy (jz_m, flds.jz);
+
+    Kokkos::deep_copy (x_m, prtls.x);
+    Kokkos::deep_copy (y_m, prtls.y);
+    Kokkos::deep_copy (z_m, prtls.z);
+
+    Kokkos::deep_copy (ux_m, prtls.ux);
+    Kokkos::deep_copy (uy_m, prtls.uy);
+    Kokkos::deep_copy (uz_m, prtls.uz);
+  }
+  ~DepositStep_Host() {
+    Kokkos::deep_copy (flds.jx, jx_m);
+    Kokkos::deep_copy (flds.jy, jy_m);
+    Kokkos::deep_copy (flds.jz, jz_m);
+
+    Kokkos::deep_copy (prtls.x, x_m);
+    Kokkos::deep_copy (prtls.y, y_m);
+    Kokkos::deep_copy (prtls.z, z_m);
+
+    Kokkos::deep_copy (prtls.ux, ux_m);
+    Kokkos::deep_copy (prtls.uy, uy_m);
+    Kokkos::deep_copy (prtls.uz, uz_m);
+  }
+
+  Inline void operator() (const size_t p) const {
+    real_t gamma_inv {1.0 / std::sqrt(1.0 + ux_m(p) * ux_m(p) + uy_m(p) * uy_m(p) + uz_m(p) * uz_m(p))};
+    real_t x1 {x_m(p) - dt * ux_m(p) * gamma_inv};
+    real_t y1 {y_m(p) - dt * uy_m(p) * gamma_inv};
+    real_t z1 {z_m(p) - dt * uz_m(p) * gamma_inv};
+
+    auto i1 {xTOi(flds, x1)};
+    auto j1 {yTOj(flds, y1)};
+    auto i2 {xTOi(flds, x_m(p))};
+    auto j2 {yTOj(flds, y_m(p))};
+
+    real_t xr = std::min(
+                  dx * static_cast<real_t>(std::min(i1, i2) + 1),
+                  std::max(
+                    static_cast<real_t>(dx * std::max(i1, i2)),
+                    0.5 * (x1 + x_m(p))
+                  )
+                );
+    real_t yr = std::min(
+                  dx * static_cast<real_t>(std::min(j1, j2) + 1),
+                  std::max(
+                    static_cast<real_t>(dx * std::max(j1, j2)),
+                    0.5 * (y1 + y_m(p))
+                  )
+                );
+    real_t zr = std::min(1.0, std::max(static_cast<real_t>(0), 0.5 * (z1 + z_m(p))));
+
+    real_t Wx1 {0.5 * (x1 + xr) - dx * static_cast<real_t>(i1)};
+    real_t Wy1 {0.5 * (y1 + yr) - dx * static_cast<real_t>(j1)};
+    real_t Wx2 {0.5 * (x_m(p) + xr) - dx * static_cast<real_t>(i2)};
+    real_t Wy2 {0.5 * (y_m(p) + yr) - dx * static_cast<real_t>(j2)};
+    real_t onemWx1 {1.0 - Wx1};
+    real_t onemWy1 {1.0 - Wy1};
+    real_t onemWx2 {1.0 - Wx2};
+    real_t onemWy2 {1.0 - Wy2};
+
+    real_t Fx1 {-(xr - x1) * weighted_charge};
+    real_t Fy1 {-(yr - y1) * weighted_charge};
+    real_t Fz1 {-(zr - z1) * weighted_charge};
+    real_t Fx2 {-(x_m(p) - xr) * weighted_charge};
+    real_t Fy2 {-(y_m(p) - yr) * weighted_charge};
+    real_t Fz2 {-(z_m(p) - zr) * weighted_charge};
+
+    Kokkos::atomic_add(&jx_m(i1  , j1  ), Fx1 * onemWy1);
+    Kokkos::atomic_add(&jx_m(i1  , j1+1), Fx1 * Wy1);
+
+    Kokkos::atomic_add(&jy_m(i1  , j1  ), Fy1 * onemWx1);
+    Kokkos::atomic_add(&jy_m(i1+1, j1  ), Fy1 * Wx1);
+
+    Kokkos::atomic_add(&jx_m(i2  , j2  ), Fx2 * onemWy2);
+    Kokkos::atomic_add(&jx_m(i2  , j2+1), Fx2 * Wy2);
+
+    Kokkos::atomic_add(&jy_m(i2  , j2  ), Fy2 * onemWx2);
+    Kokkos::atomic_add(&jy_m(i2+1, j2  ), Fy2 * Wx2);
+
+    Kokkos::atomic_add(&jz_m(i1  , j1  ), Fz1 * onemWx1 * onemWy1);
+    Kokkos::atomic_add(&jz_m(i1+1, j1  ), Fz1 * Wx1 * onemWy1);
+    Kokkos::atomic_add(&jz_m(i1  , j1+1), Fz1 * onemWx1 * Wy1);
+    Kokkos::atomic_add(&jz_m(i1+1, j1+1), Fz1 * Wx1 * Wy1);
+
+    Kokkos::atomic_add(&jz_m(i2  , j2  ), Fz2 * onemWx2 * onemWy2);
+    Kokkos::atomic_add(&jz_m(i2+1, j2  ), Fz2 * Wx2 * onemWy2);
+    Kokkos::atomic_add(&jz_m(i2  , j2+1), Fz2 * onemWx2 * Wy2);
+    Kokkos::atomic_add(&jz_m(i2+1, j2+1), Fz2 * Wx2 * Wy2);
+  }
+};
+
 struct DepositStep {
   Fields flds;
   Particles prtls;
@@ -200,7 +317,7 @@ void Deposit(const Fields& flds, const Particles& prtls) {
 }
 
 void DepositSerial(const Fields& flds, const Particles& prtls) {
-  DepositStep dep(flds, prtls);
+  DepositStep_Host dep(flds, prtls);
   for (size_t p {0}; p < prtls.npart; ++p) {
     dep(p);
   }
