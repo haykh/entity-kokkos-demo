@@ -5,7 +5,7 @@
 
 #include "defs.h"
 #include "objects_re.h"
-//#include "aux_re.h"
+#include "aux_re.h"
 
 #include <args.hxx>
 
