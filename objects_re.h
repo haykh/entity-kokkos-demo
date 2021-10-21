@@ -9,8 +9,7 @@ enum ParticleVar {
 };
 
 struct Particles {
-  //NTTArray<real_t*[6]> prtls;
-  Kokkos::View<real_t*[6], AccelMemSpace> prtls;
+  NTTArray<real_t*[6]> prtls;
   // NTTArray<real_t*> ux, uy, uz;
   // NTTArray<real_t*> x, y, z;
   size_t npart;

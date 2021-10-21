@@ -63,7 +63,8 @@ auto main(int argc, char **argv) -> int {
 
     std::uniform_real_distribution<real_t> unif(0.0, 1.0);
     std::default_random_engine re;
-    Kokkos::View<real_t*[6], HostMemSpace> prtl_init("prtl_init", myparticles.npart);
+    // Kokkos::View<real_t*[6], HostMemSpace> prtl_init("prtl_init", myparticles.npart);
+    typename Kokkos::View<real_t*[6]>::HostMirror prtl_init = Kokkos::create_mirror_view(myparticles.prtls);
 
     real_t gamma { 10.0 };
     for (int i {0}; i < myparticles.npart; ++i) {
@@ -75,81 +76,81 @@ auto main(int argc, char **argv) -> int {
     }
     Kokkos::deep_copy (myparticles.prtls, prtl_init);
 
-    //// init
-    ////Init(myfields, myparticles);
+    // init
+    //Init(myfields, myparticles);
 
-    //{
-      //DepositStep_Host dep(myfields, myparticles);
-      //DepositSerial(dep);
-    //}
-    //auto [rx0, ry0, rz0] = Reduce(myfields);
-    //std::cout << rx0 << " " << ry0 << " " << rz0 << "\n";
-    //Reset(myfields);
-    //Kokkos::deep_copy (myparticles.prtls, prtl_init);
+    {
+      DepositStep_Host dep(myfields, myparticles);
+      DepositSerial(dep);
+    }
+    auto [rx0, ry0, rz0] = Reduce(myfields);
+    std::cout << rx0 << " " << ry0 << " " << rz0 << "\n";
+    Reset(myfields);
+    Kokkos::deep_copy (myparticles.prtls, prtl_init);
 
-    //// deposit
-    //for (int i {0}; i < n_iter; ++i) {
-      //{
-        //t_deposit_1.start();
-        //Deposit(myfields, myparticles);
-        //t_deposit_1.stop();
-      //}
-      //{
-        //t_move_1.start();
-        //Move(myfields, myparticles);
-        //t_move_1.stop();
-      //}
-      //{
-        //auto [rx, ry, rz] = Reduce(myfields);
-        //if (!numbersAreEqual(rx, rx0, 1e-8, 1e-6) ||
-            //!numbersAreEqual(ry, ry0, 1e-8, 1e-6) ||
-            //!numbersAreEqual(rz, rz0, 1e-8, 1e-6)) {
-          //std::cout << "PARALLEL TEST FAILED\n";
-          //std::cout << std::setprecision(17) << rx << " : " << ry << " : " << rz << std::endl;
-          //std::cout << std::setprecision(17) << rx0 << " : " << ry0 << " : " << rz0 << std::endl;
-        //}
-      //}
+    // deposit
+    for (int i {0}; i < n_iter; ++i) {
+      {
+        t_deposit_1.start();
+        Deposit(myfields, myparticles);
+        t_deposit_1.stop();
+      }
+      {
+        t_move_1.start();
+        Move(myfields, myparticles);
+        t_move_1.stop();
+      }
+      {
+        auto [rx, ry, rz] = Reduce(myfields);
+        if (!numbersAreEqual(rx, rx0, 1e-8, 1e-6) ||
+            !numbersAreEqual(ry, ry0, 1e-8, 1e-6) ||
+            !numbersAreEqual(rz, rz0, 1e-8, 1e-6)) {
+          std::cout << "PARALLEL TEST FAILED\n";
+          std::cout << std::setprecision(17) << rx << " : " << ry << " : " << rz << std::endl;
+          std::cout << std::setprecision(17) << rx0 << " : " << ry0 << " : " << rz0 << std::endl;
+        }
+      }
 
-      //Reset(myfields);
-      //Kokkos::deep_copy (myparticles.prtls, prtl_init);
+      Reset(myfields);
+      Kokkos::deep_copy (myparticles.prtls, prtl_init);
 
-      //{
-        //DepositStep_Host dep(myfields, myparticles);
-        //t_deposit_serial.start();
-        //DepositSerial(dep);
-        //t_deposit_serial.stop();
-      //}
-      //{
-        //MoveStep_Host mov(myfields, myparticles);
-        //t_move_serial.start();
-        //MoveSerial(mov);
-        //t_move_serial.stop();
-      //}
-      //{
-        //auto [rx, ry, rz] = Reduce(myfields);
-        //if (!numbersAreEqual(rx, rx0, 1e-8, 1e-6) ||
-            //!numbersAreEqual(ry, ry0, 1e-8, 1e-6) ||
-            //!numbersAreEqual(rz, rz0, 1e-8, 1e-6)) {
-          //std::cout << "SERIAL TEST FAILED\n";
-        //}
-      //}
+      {
+        DepositStep_Host dep(myfields, myparticles);
+        t_deposit_serial.start();
+        DepositSerial(dep);
+        t_deposit_serial.stop();
+      }
+      {
+        MoveStep_Host mov(myfields, myparticles);
+        t_move_serial.start();
+        MoveSerial(mov);
+        t_move_serial.stop();
+      }
+      {
+        auto [rx, ry, rz] = Reduce(myfields);
+        if (!numbersAreEqual(rx, rx0, 1e-8, 1e-6) ||
+            !numbersAreEqual(ry, ry0, 1e-8, 1e-6) ||
+            !numbersAreEqual(rz, rz0, 1e-8, 1e-6)) {
+          std::cout << "SERIAL TEST FAILED\n";
+        }
+      }
 
-      //Reset(myfields);
-      //Kokkos::deep_copy (myparticles.prtls, prtl_init);
-    //}
+      Reset(myfields);
+      Kokkos::deep_copy (myparticles.prtls, prtl_init);
+    }
 
-    //t_deposit_serial.printElapsed(ntt::millisecond);
-    //std::cout << "\n";
-    //t_deposit_1.printElapsed(ntt::millisecond);
-    //std::cout << " [x" << t_deposit_serial.getElapsedIn(ntt::millisecond) / t_deposit_1.getElapsedIn(ntt::millisecond) << "]";
-    //std::cout << "\n\n";
+    t_deposit_serial.printElapsed(ntt::millisecond);
+    std::cout << "\n";
+    t_deposit_1.printElapsed(ntt::millisecond);
+    std::cout << " [x" << t_deposit_serial.getElapsedIn(ntt::millisecond) / t_deposit_1.getElapsedIn(ntt::millisecond) << "]";
+    std::cout << "\n\n";
 
-    //t_move_serial.printElapsed(ntt::millisecond);
-    //std::cout << "\n";
-    //t_move_1.printElapsed(ntt::millisecond);
-    //std::cout << " [x" << t_move_serial.getElapsedIn(ntt::millisecond) / t_move_1.getElapsedIn(ntt::millisecond) << "]";
-    //std::cout << "\n\n";
-    //std::cout << ".... fin\n";
+    t_move_serial.printElapsed(ntt::millisecond);
+    std::cout << "\n";
+    t_move_1.printElapsed(ntt::millisecond);
+    std::cout << " [x" << t_move_serial.getElapsedIn(ntt::millisecond) / t_move_1.getElapsedIn(ntt::millisecond) << "]";
+    std::cout << "\n\n";
+    std::cout << ".... fin\n";
   }
   Kokkos::finalize();
   return 0;
