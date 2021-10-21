@@ -1,59 +1,51 @@
-#include "timer.h"
-
 #include <cstddef>
 #include <iostream>
 #include <vector>
 
+#include <omp.h>
+
 auto main() -> int {
   using real_t = double;
   {
-    int niter {100};
-    int size[] = {8000000};
+    int niter {10};
+    int size[] = {1000000};
 
     auto A = new double[size[0]];
     auto B = new double[size[0]];
 
-    ntt::Timer timer1("init");
-    ntt::Timer timer2("compute");
-    ntt::Timer timer3("reduce");
-
-    timer1.start();
+    auto timer1 = omp_get_wtime();
     std::size_t i;
-    #pragma omp parallel for
+#pragma omp parallel for
     for (i = 0; i < size[0]; ++i) {
       A[i] = static_cast<double>(i);
       B[i] = -static_cast<double>(i) * 0.5 / static_cast<double>(niter);
     }
-    timer1.stop();
+    timer1 = omp_get_wtime() - timer1;
 
-    timer2.start();
+    double timer2{0.0};
     for (std::size_t n{0}; n < niter; ++n) {
       double coeff = 1.0 / static_cast<double>(niter);
-      #pragma omp parallel for
+      auto timer2_ = omp_get_wtime();
+#pragma omp parallel for
       for (i = 0; i < size[0]; ++i) {
-        A[i] = A[i] + 2.0 * B[i] + coeff;
+        A[i] += 2.0 * (B[i] - B[i - 1] + 2.0 * B[i + 1]) + coeff;
       }
+      timer2_ = omp_get_wtime() - timer2_;
+      timer2 += timer2_;
     }
-    timer2.stop();
 
     double sum{0.0};
-    timer3.start();
-    #pragma omp parallel for reduction(+ : sum)
+    auto timer3 = omp_get_wtime();
+#pragma omp parallel for reduction(+ : sum)
     for (i = 0; i < size[0]; ++i) {
       sum += A[i] / static_cast<double>(size[0]);
     }
-    timer3.stop();
+    timer3 = omp_get_wtime() - timer3;
     
-    timer1.printElapsed(std::cout, ntt::millisecond);
-    std::cout << "\n";
-    timer2.printElapsed(std::cout, ntt::millisecond);
-    std::cout << "\n";
-    timer3.printElapsed(std::cout, ntt::millisecond);
-    std::cout << "\n";
-
-    double Gbytes = 1.0e-9 * double( sizeof(double) * (size[0] * niter * 2) );
-    std::cout << "Bandwith : " << Gbytes / timer2.getElapsedIn(ntt::second) << " [GB/s]\n";
-    std::cout << (std::abs(sum - 1.0) < 1.0e-8 ? "Test Passed" : "ERROR") << std::endl;
+    std::cout << "sum: " << sum << "\n";
+    std::cout << "init " << timer1 << "\n";
+    std::cout << "upd " << timer2 << "\n";
+    std::cout << "reduce " << timer3 << "\n";
   }
   return 0;
 }

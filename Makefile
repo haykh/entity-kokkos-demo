@@ -5,6 +5,8 @@ EXTRA_INC = -Iextern/plog/include
 
 #SRC = $(wildcard *.cpp)
 SRC := full.cpp
+#SRC := 1darr_lt.cpp
+#SRC := alloc.cpp
 SRC := $(SRC) timer.cpp
 
 default: build
@@ -16,6 +18,7 @@ ifneq (,$(findstring Cuda,$(KOKKOS_DEVICES)))
 CXX = ${KOKKOS_PATH}/bin/nvcc_wrapper
 EXE = ${EXE_NAME}.cuda
 KOKKOS_ARCH = "AMPERE80"
+# KOKKOS_ARCH = "VOLTA70"
 KOKKOS_CUDA_OPTIONS = "enable_lambda"
 CXXFLAGS = -DGPUENABLED --expt-relaxed-constexpr
 else
@@ -23,8 +26,9 @@ CXX = icpc
 EXE = ${EXE_NAME}.host
 KOKKOS_ARCH = "SKX"
 ifneq (,$(findstring OpenMP,$(KOKKOS_DEVICES)))
-CXXFLAGS = -DOMPENABLED -Ofast
+CXXFLAGS = -DOMPENABLED
 endif
+CXXFLAGS := $(CXXFLAGS) -Ofast -ipo
 endif
 
 CXXFLAGS := ${CXXFLAGS} -O3

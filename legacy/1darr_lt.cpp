@@ -19,8 +19,8 @@ auto main() -> int {
   using real_t = double;
   Kokkos::initialize();
   {
-    int niter {100};
-    int size[] = {8000000};
+    int niter {10};
+    int size[] = {1000000};
 
     NTTArray<double*> A("A", size[0]);
     NTTArray<double*> B("B", size[0]);
@@ -43,9 +43,9 @@ auto main() -> int {
     for (index_t n{0}; n < niter; ++n) {
       double coeff = 1.0 / static_cast<double>(niter);
       Kokkos::parallel_for("compute",
-        NTTRange(0, size[0]),
+        NTTRange(1, size[0] - 1),
         Lambda (index_t i) {
-          A(i) = A(i) + 2.0 * B(i) + coeff;
+          A(i) += 2.0 * (B(i) - B(i - 1) + 2.0 * B(i + 1)) + coeff;
         }
       );
     }
@@ -61,16 +61,13 @@ auto main() -> int {
     );
     timer3.stop();
     
-    timer1.printElapsed(std::cout, ntt::millisecond);
+    std::cout << "sum " << sum << std::endl;
+    timer1.printElapsed(std::cout, ntt::second);
     std::cout << "\n";
-    timer2.printElapsed(std::cout, ntt::millisecond);
+    timer2.printElapsed(std::cout, ntt::second);
     std::cout << "\n";
-    timer3.printElapsed(std::cout, ntt::millisecond);
+    timer3.printElapsed(std::cout, ntt::second);
     std::cout << "\n";
-
-    double Gbytes = 1.0e-9 * double( sizeof(double) * (size[0] * niter * 2) );
-    std::cout << "Bandwith : " << Gbytes / timer2.getElapsedIn(ntt::second) << " [GB/s]\n";
-    std::cout << (std::abs(sum - 1.0) < 1.0e-8 ? "Test Passed" : "ERROR") << std::endl;
   }
   Kokkos::finalize();
   return 0;

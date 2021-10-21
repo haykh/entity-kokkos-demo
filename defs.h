@@ -1,5 +1,9 @@
+#ifndef DEF_H
+#define DEF_H
+
 #include "timer.h"
 #include <Kokkos_Core.hpp>
+#include <Kokkos_Random.hpp>
 
 #define Lambda    KOKKOS_LAMBDA
 #define Inline    KOKKOS_INLINE_FUNCTION
@@ -29,6 +33,8 @@ inline constexpr float ONE {1.0f};
 using real_t = double;
 inline constexpr double ONE {1.0};
 #endif
+
+#define N_GHOSTS 2
 
 using range_t = Kokkos::RangePolicy<AccelExeSpace>::member_type;
 
@@ -71,3 +77,5 @@ auto numbersAreEqual(float a, float b) -> bool {
 auto numbersAreEqual(double a, double b) -> bool {
   return numbersAreEqual(a, b, C_DOUBLE_ABS_EPSILON, C_DOUBLE_REL_EPSILON);
 }
+
+#endif
