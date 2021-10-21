@@ -17,8 +17,8 @@ KOKKOS_CXX_STANDARD = c++17
 ifneq (,$(findstring Cuda,$(KOKKOS_DEVICES)))
 CXX = ${KOKKOS_PATH}/bin/nvcc_wrapper
 EXE = ${EXE_NAME}.cuda
-# KOKKOS_ARCH = "AMPERE80"
-KOKKOS_ARCH = "VOLTA70"
+KOKKOS_ARCH = "AMPERE80"
+# KOKKOS_ARCH = "VOLTA70"
 KOKKOS_CUDA_OPTIONS = "enable_lambda"
 CXXFLAGS = -DGPUENABLED --expt-relaxed-constexpr
 else

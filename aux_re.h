@@ -325,7 +325,6 @@ struct MoveStep_Host {
 struct MoveStep {
   Fields flds;
   Particles prtls;
-  real_t weighted_charge {1.0};
   real_t dt;
   real_t dx;
 
@@ -336,10 +335,7 @@ struct MoveStep {
     {}
 
   Inline void operator() (const size_t p) const {
-    real_t gamma_inv {1.0 / std::sqrt(1.0 +
-              prtls.prtls(p, p_ux) * prtls.prtls(p, p_ux) +
-              prtls.prtls(p, p_uy) * prtls.prtls(p, p_uy) +
-              prtls.prtls(p, p_uz) * prtls.prtls(p, p_uz))};
+    real_t gamma_inv {1.0 / std::sqrt(1.0 + prtls.prtls(p, p_ux) * prtls.prtls(p, p_ux) + prtls.prtls(p, p_uy) * prtls.prtls(p, p_uy) + prtls.prtls(p, p_uz) * prtls.prtls(p, p_uz))};
     real_t x1 {prtls.prtls(p, p_x) + dt * prtls.prtls(p, p_ux) * gamma_inv};
     real_t y1 {prtls.prtls(p, p_y) + dt * prtls.prtls(p, p_uy) * gamma_inv};
     real_t z1 {prtls.prtls(p, p_z) + dt * prtls.prtls(p, p_uz) * gamma_inv};
@@ -355,9 +351,16 @@ struct MoveStep {
     //prtls.ux(p) += flds.jy(1, 2);
     //prtls.uy(p) += flds.jz(2, 2);
     //prtls.uz(p) += flds.jx(1, 1);
-    prtls.prtls(p, p_ux) += flds.jy(i1, j2);
-    prtls.prtls(p, p_uy) += flds.jz(i2, j2);
-    prtls.prtls(p, p_uz) += flds.jx(i1, j1);
+    if ((i1 < 0) || (i1 >= 260) || 
+        (i2 < 0) || (i2 >= 260) || 
+        (j1 < 0) || (j1 >= 260) || 
+        (j2 < 0) || (j2 >= 260)) {
+      std::cout << "ERRR " << i1 << " " << i2 << " " << j1 << " " << j2 << "\n";
+    } else {
+      prtls.prtls(p, p_ux) += flds.jy(i1, j2);
+      prtls.prtls(p, p_uy) += flds.jz(i2, j2);
+      prtls.prtls(p, p_uz) += flds.jx(i1, j1);
+    }
   }
 };
 void Reset(const Fields& flds) {

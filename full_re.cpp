@@ -64,12 +64,13 @@ auto main(int argc, char **argv) -> int {
     std::uniform_real_distribution<real_t> unif(0.0, 1.0);
     std::default_random_engine re;
     // Kokkos::View<real_t*[6], HostMemSpace> prtl_init("prtl_init", myparticles.npart);
-    typename Kokkos::View<real_t*[6]>::HostMirror prtl_init = Kokkos::create_mirror_view(myparticles.prtls);
+    typename Kokkos::View<real_t*[6], HostMemSpace>::HostMirror prtl_init = Kokkos::create_mirror(myparticles.prtls);
 
     real_t gamma { 10.0 };
     for (int i {0}; i < myparticles.npart; ++i) {
       prtl_init(i, p_x) = myfields.xmin + (myfields.xmax - myfields.xmin) * unif(re);
       prtl_init(i, p_y) = myfields.ymin + (myfields.ymax - myfields.ymin) * unif(re);
+      prtl_init(i, p_z) = 0.0;
       prtl_init(i, p_ux) = 2.0 * (unif(re) - 0.5) * gamma;
       prtl_init(i, p_uy) = 2.0 * (unif(re) - 0.5) * gamma;
       prtl_init(i, p_uz) = 2.0 * (unif(re) - 0.5) * gamma;
