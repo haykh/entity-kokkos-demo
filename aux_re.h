@@ -2,7 +2,6 @@
 #define AUX_H
 
 #include "objects_re.h"
-#include <random>
 
 Inline auto xTOi(const Fields& flds, const real_t& x) -> size_t {
   return N_GHOSTS + static_cast<size_t>(flds.sx * (x - flds.xmin) / (flds.xmax - flds.xmin));
@@ -284,7 +283,7 @@ struct MoveStep_Host {
       jx_m {Kokkos::create_mirror_view(flds.jx)},
       jy_m {Kokkos::create_mirror_view(flds.jy)},
       jz_m {Kokkos::create_mirror_view(flds.jz)},
-      prtls_m {Kokkos::create_mirror_view(prtls.prtls)} {
+      prtls_m {Kokkos::create_mirror_view(prtls.prtls)}
   {
     Kokkos::deep_copy (jx_m, flds.jx);
     Kokkos::deep_copy (jy_m, flds.jy);

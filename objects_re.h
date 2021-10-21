@@ -9,12 +9,13 @@ enum ParticleVar {
 };
 
 struct Particles {
-  NTTArray<real_t*[6]> prtls;
+  //NTTArray<real_t*[6]> prtls;
+  Kokkos::View<real_t*[6], AccelMemSpace> prtls;
   // NTTArray<real_t*> ux, uy, uz;
   // NTTArray<real_t*> x, y, z;
   size_t npart;
   Particles(size_t npart) :
-    npart{npart}, prtls{"prtl", npart} {}
+    npart{npart}, prtls{"prtl_vars", npart} {}
 
   auto loopAll() const -> ntt_1drange_t {
     return ntt_1drange_t(0, npart);

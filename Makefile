@@ -4,7 +4,7 @@ EXE_NAME = "main"
 EXTRA_INC = -Iextern/plog/include
 
 #SRC = $(wildcard *.cpp)
-SRC := full.cpp
+SRC := full_re.cpp
 #SRC := 1darr_lt.cpp
 #SRC := alloc.cpp
 SRC := $(SRC) timer.cpp
@@ -17,8 +17,8 @@ KOKKOS_CXX_STANDARD = c++17
 ifneq (,$(findstring Cuda,$(KOKKOS_DEVICES)))
 CXX = ${KOKKOS_PATH}/bin/nvcc_wrapper
 EXE = ${EXE_NAME}.cuda
-KOKKOS_ARCH = "AMPERE80"
-# KOKKOS_ARCH = "VOLTA70"
+# KOKKOS_ARCH = "AMPERE80"
+KOKKOS_ARCH = "VOLTA70"
 KOKKOS_CUDA_OPTIONS = "enable_lambda"
 CXXFLAGS = -DGPUENABLED --expt-relaxed-constexpr
 else
