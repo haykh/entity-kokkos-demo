@@ -4,7 +4,7 @@ EXE_NAME = "main"
 EXTRA_INC = -Iextern/plog/include
 
 #SRC = $(wildcard *.cpp)
-SRC := full_re.cpp
+SRC := full_re_re.cpp
 #SRC := 1darr_lt.cpp
 #SRC := alloc.cpp
 SRC := $(SRC) timer.cpp
