@@ -1,13 +1,10 @@
 KOKKOS_PATH = extern/kokkos
-KOKKOS_DEVICES = "Cuda,OpenMP"
+KOKKOS_DEVICES = "OpenMP"
+#KOKKOS_DEVICES = "Cuda,OpenMP"
 EXE_NAME = "main"
 EXTRA_INC = -Iextern/plog/include
 
-#SRC = $(wildcard *.cpp)
-SRC := full_re_re.cpp
-#SRC := 1darr_lt.cpp
-#SRC := alloc.cpp
-SRC := $(SRC) timer.cpp
+SRC = $(wildcard *.cpp)
 
 default: build
 	echo "Start Build"
@@ -22,13 +19,13 @@ KOKKOS_ARCH = "AMPERE80"
 KOKKOS_CUDA_OPTIONS = "enable_lambda"
 CXXFLAGS = -DGPUENABLED --expt-relaxed-constexpr
 else
-CXX = icpc
+CXX = g++-11
 EXE = ${EXE_NAME}.host
-KOKKOS_ARCH = "SKX"
+KOKKOS_ARCH = "HSW"
 ifneq (,$(findstring OpenMP,$(KOKKOS_DEVICES)))
 CXXFLAGS = -DOMPENABLED
 endif
-CXXFLAGS := $(CXXFLAGS) -Ofast -ipo
+CXXFLAGS := $(CXXFLAGS) -Ofast
 endif
 
 CXXFLAGS := ${CXXFLAGS} -O3
