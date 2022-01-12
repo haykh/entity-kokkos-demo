@@ -1,0 +1,4 @@
+[submodule "extern/kokkos"]
+	path = extern/kokkos
+	url = git@github.com:haykh/kokkos.git
+	branch = develop
